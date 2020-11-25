@@ -1,0 +1,25 @@
+/* 全局样式表 */
+html, body, #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+li{
+    list-style: none;
+    color: black;
+    font-size: 18px;
+}
+
+a {
+    list-style: none;
+    color: black;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+input {
+    font-size: 18px;
+    outline: none;
+    border: none;
+}
