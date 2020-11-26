@@ -15,7 +15,7 @@
           <a href="#">物流单号：</a>
           <input type="text" v-model.trim="getList.number">
           <div><span class="iconfont icon-gouwuche"></span>新建订单</div>
-          <div @click="getDataList"><span class="iconfont icon-search"></span>查询</div>
+          <div @click="queryList"><span class="iconfont icon-search"></span>查询</div>
         </div>
         <!-- 表格区域 -->
         <div class="view">
@@ -59,11 +59,13 @@
             </tr>
           </table>
         </div>
-        <!-- 翻页按钮 -->
+        <!-- 翻页按钮组 -->
+        <paging :pagSum="sum" :pagStart="getList.start" @pagEvent='handleEvent($event)'></paging>
     </div>
 </template>
 
 <script>
+import paging from '@/components/Paging.vue'
 export default {
   data () {
     return {
@@ -80,7 +82,9 @@ export default {
         number: ''
       },
       // 订单数据列表
-      dataList: []
+      dataList: [],
+      // 数据条数
+      sum: 0
     }
   },
   created () {
@@ -102,6 +106,21 @@ export default {
       }
       // 将需要高亮的选项加上class
       e.target.parentElement.getElementsByTagName('li')[this.getList.navigation].className = 'pitch'
+      this.getList.start = 1
+      this.getDataList()
+    },
+    // 组件子传父自定义事件函数
+    handleEvent (ev) {
+      // console.log(ev)
+      if (ev <= Math.ceil(this.sum / 12)) {
+        this.getList.start = Number(ev)
+        this.getDataList()
+      }
+      // console.log(this.getList.start)
+    },
+    // 查询订单
+    queryList () {
+      this.getList.start = 1
       this.getDataList()
     },
     // 发送请求获取订单列表
@@ -113,8 +132,12 @@ export default {
       }
       this.dataList = res.message
       // this.$message.success('获取成功')
-      console.log(this.dataList)
+      this.sum = res.sum
+      // console.log(this.sum)
     }
+  },
+  components: {
+    paging: paging
   }
 }
 </script>
@@ -142,7 +165,8 @@ export default {
     transform: translateX(-50%);
     margin-top: 20px;
     input {
-      border: 1px solid #a9a9a9;
+      border: 1px solid #e7e7e7;
+      background-color: #eeeeee;
       width: 12%;
       height: 28px;
       margin-right: 20px;

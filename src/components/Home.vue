@@ -5,7 +5,7 @@
           <h2>OpenA网店订单管理系统</h2>
           <div>
             <span class="iconfont icon-denglu"></span>
-            <a href="#">{{ employeeName }}</a>
+            <a href="#/datum">{{ employeeName }}</a>
             <span class="iconfont icon-tuichu" @click="logout"></span>
           </div>
         </div>
