@@ -49,6 +49,7 @@ export default {
         margin-top: 20px;
         float: right;
         margin-right: 5%;
+        margin-bottom: 20px;
         a {
             color: #666666;
             font-size: 14px;

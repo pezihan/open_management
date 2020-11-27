@@ -37,7 +37,7 @@ Vue.config.productionTip = false
 
 // 将时间处理函数挂在到vue的上全局可以使用(vue过滤器) 传入毫秒数转换成时间格式
 Vue.filter('dateFormat', function (originVal) {
-  const dt = new Date(originVal)
+  const dt = new Date(originVal * 1000)
   const y = dt.getFullYear() // 年
   const m = (dt.getMonth() + 1 + '').padStart(2, '0') // 月
   const d = (dt.getDate() + '').padStart(2, '0') // 日

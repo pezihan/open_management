@@ -19,10 +19,10 @@
         </div>
         <!-- 表格区域 -->
         <div class="view">
-          <div>后台订单列表<div><span class="iconfont icon-shanchu"></span>批量删除订单</div></div>
+          <div>后台订单列表<div @click="deleteBatch"><span class="iconfont icon-shanchu"></span>批量删除订单</div></div>
           <table>
             <tr>
-              <th><input type="checkbox"/>全选</th>
+              <th><input type="checkbox" ref="checkboxRef" @click="checkAll" id="checkAllId"/>全选</th>
               <th>姓名</th>
               <th>订单编号</th>
               <th>商品</th>
@@ -40,7 +40,7 @@
               <td colspan="13">无数据</td>
             </tr>
             <tr v-for="data in dataList" :key="data.id" v-else>
-              <td><input type="checkbox"/></td>
+              <td><input type="checkbox" @click="multiple" :index="data.id" class="multipleC"/></td>
               <td>{{ data.employeeName }}</td>
               <td>{{ data.employeeID }}</td>
               <td>{{ data.commodity }}</td>
@@ -49,12 +49,14 @@
               <td>{{ data.address }}</td>
               <td>{{ data.phone }}</td>
               <td>{{ data.number }}</td>
-              <td>{{ data.time }}</td>
+              <!-- 使用过滤将毫秒数转换成定义好的时间格式 -->
+              <td>{{ data.time | dateFormat}}</td>
               <td><i>{{ data.staus }}</i></td>
               <td>{{ data.operator }}</td>
               <td>
                 <a><span class="iconfont icon-xiugai-copy"></span>修改</a>
-                <a><span class="iconfont icon-shanchu"></span>删除</a>
+                <a @click="deleteAnima($event)"><span class="iconfont icon-shanchu"></span>删除</a>
+                <a @click="deleteData(data.id)" @mouseout="deleteOut($event)" v-show="false"><span class="iconfont icon-shanchu"></span>删除</a>
               </td>
             </tr>
           </table>
@@ -84,7 +86,9 @@ export default {
       // 订单数据列表
       dataList: [],
       // 数据条数
-      sum: 0
+      sum: 0,
+      // 提交到后台删除的id数组
+      deleteId: []
     }
   },
   created () {
@@ -114,6 +118,7 @@ export default {
       // console.log(ev)
       if (ev <= Math.ceil(this.sum / 12)) {
         this.getList.start = Number(ev)
+        this.dataList = []
         this.getDataList()
       }
       // console.log(this.getList.start)
@@ -134,6 +139,93 @@ export default {
       // this.$message.success('获取成功')
       this.sum = res.sum
       // console.log(this.sum)
+    },
+    // 点击单条删除时的动画效果
+    deleteAnima (ev) {
+      // console.log(ev.target.nextElementSibling)
+      ev.currentTarget.style.display = 'none'
+      ev.currentTarget.previousElementSibling.style.display = 'none'
+      ev.currentTarget.nextElementSibling.style.display = 'inline'
+    },
+    // 鼠标移出删除按钮
+    deleteOut (ev) {
+      ev.currentTarget.style.display = 'none'
+      ev.currentTarget.previousElementSibling.style.display = 'inline'
+      ev.currentTarget.previousElementSibling.previousElementSibling.style.display = 'inline'
+    },
+    // 删除数据函数
+    async deletes () {
+      if (this.deleteId.length !== 0) {
+        const { data: res } = await this.$http.post('/delete', { deleteId: this.deleteId })
+        if (res.success !== 200) {
+          return this.$message.error('删除订单数据失败')
+        }
+        this.$message.success('删除订单数据成功')
+        // 获取数据列表
+        const { data: ress } = await this.$http.get('/order', { params: this.getList })
+        if (ress.success !== 200) {
+          return this.$message.error('获取订单数据失败')
+        } else if (ress.message.length === 0 && this.getList.start !== 1) {
+          this.getList.start--
+          this.getDataList()
+        } else {
+          this.dataList = ress.message
+          this.sum = ress.sum
+        }
+      }
+    },
+    // 删除单条数据数据请求
+    deleteData (id) {
+      // console.log(id)
+      this.deleteId.push(id)
+      this.deletes()
+      this.deleteId = []
+    },
+    // 批量删除数据
+    deleteBatch () {
+      var otd = document.getElementsByClassName('multipleC')
+      this.deleteId = []
+      otd.forEach((item) => {
+        if (item.checked === true) {
+          this.deleteId.push(item.getAttribute('index'))
+        }
+      })
+      console.log(this.deleteId)
+      this.deletes()
+      this.deleteId = []
+      // console.log(this.$refs.checkboxRef)
+      this.$refs.checkboxRef.checked = false
+    },
+    // 全选事件函数
+    checkAll () {
+      var oth = document.getElementById('checkAllId')
+      var otd = document.getElementsByClassName('multipleC')
+      // console.log(oth.checked)
+      if (oth.checked === true) {
+        otd.forEach((item, index) => {
+          item.checked = true
+        })
+      } else {
+        otd.forEach((item, index) => {
+          item.checked = false
+        })
+      }
+    },
+    // 单选事件
+    multiple () {
+      var oth = document.getElementById('checkAllId')
+      var otd = document.getElementsByClassName('multipleC')
+      var str = 0
+      otd.forEach((item) => {
+        if (item.checked === true) {
+          str++
+        }
+      })
+      if (str < this.dataList.length) {
+        oth.checked = false
+      } else if (str === this.dataList.length) {
+        oth.checked = true
+      }
     }
   },
   components: {
@@ -217,6 +309,7 @@ export default {
       display: inline-block;
       line-height: 40px;
       position: relative;
+      cursor: default;
       div {
         width: 125px;
         height: 28px;
@@ -258,6 +351,10 @@ export default {
         a:nth-child(2) {
             background: #fd4c4c;
           }
+        a:nth-child(3) {
+            padding: 4px 34px;
+            background: #fd4c4c;
+          }
         a {
           width: 60px;
           height: 28px;
@@ -270,6 +367,7 @@ export default {
         i {
           font-style: initial;
           color: blue;
+          cursor: default;
        }
       }
     }
