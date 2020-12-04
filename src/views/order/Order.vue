@@ -14,7 +14,7 @@
           <input type="number" v-model.trim="getList.phone">
           <a href="#">物流单号：</a>
           <input type="text" v-model.trim="getList.number">
-          <div><span class="iconfont icon-gouwuche"></span>新建订单</div>
+          <div @click="editOrder"><span class="iconfont icon-gouwuche"></span>新建订单</div>
           <div @click="queryList"><span class="iconfont icon-search"></span>查询</div>
         </div>
         <!-- 表格区域 -->
@@ -54,7 +54,7 @@
               <td><i>{{ data.staus }}</i></td>
               <td>{{ data.operator }}</td>
               <td>
-                <a><span class="iconfont icon-xiugai-copy"></span>修改</a>
+                <a @click="remOrder(data.id)"><span class="iconfont icon-xiugai-copy"></span>修改</a>
                 <a @click="deleteAnima($event)"><span class="iconfont icon-shanchu"></span>删除</a>
                 <a @click="deleteData(data.id)" @mouseout="deleteOut($event)" v-show="false"><span class="iconfont icon-shanchu"></span>删除</a>
               </td>
@@ -63,6 +63,44 @@
         </div>
         <!-- 翻页按钮组 -->
         <paging :pagSum="sum" :pagStart="getList.start" @pagEvent='handleEvent($event)'></paging>
+        <!-- 订单添加与修改面板 -->
+        <div class="shade" v-show="shadeShow"></div>
+          <div class="edit" v-show="shadeShow">
+            <div>{{ oderText }}订单<img src="@/assets/images/off.png" alt="" @click="shadeShowEdit"></div>
+            <div>
+              <div>
+                <a href="#">订单：</a>
+                <input type="text" class="input1" v-model="editList.employeeID">
+              </div>
+              <div>
+                <a href="#">姓名：</a>
+                <input type="text" v-model="editList.employeeName">
+                <a href="#">电话：</a>
+                <input type="number" v-model="editList.phone">
+              </div>
+              <div>
+                <a href="#">地址：</a>
+                <input type="text" class="input2" v-model="editList.address">
+              </div>
+              <div>
+                <a href="#">选择商品：</a>
+                <select v-model="editList.commodity" @change="pitchOn($event)">
+                  <option>请选择</option>
+                  <option v-for="data in commodity" :key="data.id" :univalence="data.univalence" :commodityId="data.product">{{ data.commodity }}</option>
+                </select>
+                <a href="#">单价：</a>
+                <input type="number" class="input3" v-model="editList.univalence" @blur="panduan">
+                <span>元</span>
+                <a href="#">数量：</a>
+                <input type="number" class="input4" v-model="editList.amount" @blur="panduan">
+                <span>件/台</span>
+                <a>合计：</a>
+                <span v-if="editList.sum != 0">{{ editList.sum }}元</span>
+                <span v-else>{{ sumComputed }}元</span>
+              </div>
+              <div><button class="yes" @click="yesOrder">确认</button><button @click="shadeShowEdit">取消</button></div>
+            </div>
+          </div>
     </div>
 </template>
 
@@ -88,7 +126,27 @@ export default {
       // 数据条数
       sum: 0,
       // 提交到后台删除的id数组
-      deleteId: []
+      deleteId: [],
+      // 控制遮罩的显示隐藏
+      shadeShow: false,
+      // 新建与修改订单数据
+      editList: {
+        id: null,
+        employeeID: '',
+        employeeName: '',
+        phone: null,
+        address: '',
+        commodity: '请选择',
+        commodityId: null,
+        amount: 1,
+        univalence: null,
+        sum: 0,
+        operator: window.sessionStorage.employeeName
+      },
+      // 商品列表数据
+      commodity: {},
+      // 订单修改面板标题
+      oderText: '新建'
     }
   },
   created () {
@@ -226,6 +284,103 @@ export default {
       } else if (str === this.dataList.length) {
         oth.checked = true
       }
+    },
+    // 控制隐藏弹出栏
+    shadeShowEdit () {
+      this.editList = {
+        id: null,
+        employeeID: '',
+        employeeName: '',
+        phone: null,
+        address: '',
+        commodity: '请选择',
+        commodityId: null,
+        amount: 1,
+        univalence: null,
+        sum: 0,
+        operator: window.sessionStorage.employeeName
+      }
+      this.shadeShow = false
+    },
+    // 判断与数量是否符合常理
+    panduan () {
+      if (this.editList.univalence <= 0) {
+        this.editList.univalence = 1
+      }
+      if (this.editList.amount <= 0) {
+        this.editList.amount = 1
+      }
+      this.editList.amount = parseInt(this.editList.amount)
+    },
+    // 新增订单
+    async editOrder () {
+      this.oderText = '新建'
+      const { data: res } = await this.$http.get('/commodity')
+      if (res.success !== 200) {
+        return this.$message.error('获取商品列表数据失败')
+      }
+      this.commodity = res.message
+      this.shadeShow = true
+    },
+    // 修改订单
+    async remOrder (id) {
+      this.oderText = '修改'
+      const { data: res } = await this.$http.get('/commodity')
+      if (res.success !== 200) {
+        return this.$message.error('获取商品列表数据失败')
+      }
+      this.commodity = res.message
+      const { data: resId } = await this.$http.get('/orderId', { params: { id: id } })
+      this.editList.id = id
+      this.editList.employeeID = resId.message[0].employeeID
+      this.editList.employeeName = resId.message[0].employeeName
+      this.editList.commodityId = resId.message[0].commodityId
+      this.editList.phone = resId.message[0].phone
+      this.editList.address = resId.message[0].address
+      this.editList.commodity = resId.message[0].commodity
+      this.editList.amount = resId.message[0].amount
+      this.editList.sum = resId.message[0].sum
+      this.shadeShow = true
+    },
+    // 确认修改或添加订单
+    async yesOrder () {
+      if (this.editList.employeeID !== '' && this.editList.employeeName !== '' && this.editList.phone !== null && this.editList.address !== '' && this.editList.commodity !== '请选择') {
+        const { data: res } = await this.$http.post('/editOrder', this.editList)
+        if (res.success !== 200) {
+          return this.$message.error('操作失败')
+        }
+        this.$message.success('操作成功')
+        this.editList = {
+          id: null,
+          employeeID: '',
+          employeeName: '',
+          phone: null,
+          address: '',
+          commodity: '请选择',
+          commodityId: null,
+          amount: 1,
+          univalence: null,
+          sum: 0,
+          operator: window.sessionStorage.employeeName
+        }
+        this.getDataList()
+        this.shadeShow = false
+      } else {
+        this.$message.error('请正确填写订单信息')
+      }
+    },
+    pitchOn (ev) {
+      const myselect = ev.target
+      const index = myselect.selectedIndex
+      this.editList.sum = 0
+      this.editList.univalence = myselect.options[index].getAttribute('univalence')
+      this.editList.commodityId = myselect.options[index].getAttribute('commodityId')
+    }
+  },
+  computed: {
+    // 计算总价
+    sumComputed () {
+      return this.editList.amount * this.editList.univalence
     }
   },
   components: {
@@ -370,6 +525,84 @@ export default {
           cursor: default;
        }
       }
+    }
+  }
+  .shade {
+    background-color: rgba(0, 0, 0, 0.4);
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 20px;
+  }
+  .edit {
+    position: absolute;
+    z-index: 100;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    >div:nth-child(1) {
+      background-color: #fe7844;
+      color: #fff;
+      width: 820px;
+      height: 42px;
+      line-height: 42px;
+      padding: 0 20px;
+      img {
+        float: right;
+        margin-top: 10px;
+        width: 20px;
+      }
+    }
+    >div:nth-child(2) {
+      width: 820px;
+      height: 320px;
+      padding: 20px;
+      background-color: #fff;
+      div {
+        margin-top: 20px;
+        margin-bottom: 35px;
+      }
+      a {
+        font-weight: bold;
+        font-size: 16px;
+        margin-left: 20px;
+      }
+      input {
+        border: 1px solid #a9a9a9;
+        height: 25px;
+        font-size: 16px;
+      }
+      select {
+        width: 180px;
+        height: 28px;
+        border: 1px solid #a9a9a9;
+      }
+      button {
+        width: 80px;
+        height: 34px;
+        margin: 0 160px;
+        border: none;
+        background-color: #797979;
+        color: #fff;
+        font-size: 17px;
+      }
+      .yes {
+        background-color: #fe7844;
+      }
+    }
+    .input1 {
+      width: 300px;
+    }
+    .input2 {
+      width: 380px;
+    }
+    .input3 {
+      width: 60px;
+      margin-right: 10px;
+    }
+    .input4 {
+      width: 60px;
+      margin-right: 10px;
     }
   }
 </style>
