@@ -51,7 +51,7 @@
               <td>{{ data.number }}</td>
               <!-- 使用过滤将毫秒数转换成定义好的时间格式 -->
               <td>{{ data.time | dateFormat}}</td>
-              <td><i>{{ data.staus }}</i></td>
+              <td><i @click="stausEditId(data.id)">{{ data.staus }}</i></td>
               <td>{{ data.operator }}</td>
               <td>
                 <a @click="remOrder(data.id)"><span class="iconfont icon-xiugai-copy"></span>修改</a>
@@ -69,7 +69,7 @@
             <div>{{ oderText }}订单<img src="@/assets/images/off.png" alt="" @click="shadeShowEdit"></div>
             <div>
               <div>
-                <a href="#">订单：</a>
+                <a href="#">编号：</a>
                 <input type="text" class="input1" v-model="editList.employeeID">
               </div>
               <div>
@@ -86,7 +86,7 @@
                 <a href="#">选择商品：</a>
                 <select v-model="editList.commodity" @change="pitchOn($event)">
                   <option>请选择</option>
-                  <option v-for="data in commodity" :key="data.id" :univalence="data.univalence" :commodityId="data.product">{{ data.commodity }}</option>
+                  <option v-for="data in commodity" :key="data.id" :univalence="data.univalence" :commodityId="data.id">{{ data.commodity }}</option>
                 </select>
                 <a href="#">单价：</a>
                 <input type="number" class="input3" v-model="editList.univalence" @blur="panduan">
@@ -96,16 +96,51 @@
                 <span>件/台</span>
                 <a>合计：</a>
                 <span v-if="editList.sum != 0">{{ editList.sum }}元</span>
-                <span v-else>{{ sumComputed }}元</span>
+                <span v-else-if="sumComputed != 0">{{ sumComputed }}元</span>
               </div>
               <div><button class="yes" @click="yesOrder">确认</button><button @click="shadeShowEdit">取消</button></div>
             </div>
+          </div>
+          <!-- 售后添加事务面板 -->
+          <div class="shade" v-show="stausEditShow"></div>
+          <div class="editAffair" v-show="stausEditShow">
+            <div>状态<img src="@/assets/images/off.png" alt="" @click="stausOff"></div>
+            <div>
+              <a href="#" class="message">姓名：{{ stausList[0].employeeName }}</a>
+              <a href="#" class="message">订单编号：{{ stausList[0].employeeID }}</a>
+              <a href="#" class="message">原始物流单号：{{ stausList[0].number }}</a>
+              <div>
+                <a href="#">维修记录：</a><div>{{ stausList[0].maintain }}</div>
+                <button @click="editRecord1(stausList[0].id)">新建事务</button>
+              </div>
+              <div>
+                <a href="#">换货记录：</a><div>{{ stausList[0].exchange }}</div>
+                <button @click="editRecord2(stausList[0].id)">新建事务</button>
+              </div>
+              <div>
+                <a href="#">退货记录：</a><div>{{ stausList[0].returns }}</div>
+                <button @click="editRecord3(stausList[0].id)">新建事务</button><br>
+                <button id="refund" @click="reimburse">确认退款</button>
+              </div>
+            </div>
+            <!-- 添加事务对话框 -->
+            <div class="editRecord" v-show="editRecordShow"></div>
+            <div class="editRecords" v-show="editRecordShow">
+              <div>事务内容</div>
+              <div>
+                <textarea v-model="stausEdit.stausText" placeholder="请输入事务内容"></textarea>
+                <button class="btn1" @click="editRecordYes(stausList[0].id)">确定</button>
+                <button class="btn2" @click="editRecordOff">取消</button>
+              </div>
+            </div>
+            <popupbox boxtext="是否确认退款" :id='stausList[0].id' @boxbtnyes='handleBox($event)' @boxbtnon='handleBoxshow=false' v-show="handleBoxshow"></popupbox>
           </div>
     </div>
 </template>
 
 <script>
 import paging from '@/components/Paging.vue'
+import popupbox from '@/components/Popupbox.vue'
 export default {
   data () {
     return {
@@ -146,7 +181,28 @@ export default {
       // 商品列表数据
       commodity: {},
       // 订单修改面板标题
-      oderText: '新建'
+      oderText: '新建',
+      // 售后面板状态显示
+      stausEditShow: false,
+      // 售后面板状态数据
+      stausList: [{
+        employeeName: '',
+        employeeID: '',
+        number: '',
+        maintain: '',
+        exchange: '',
+        returns: ''
+      }],
+      // 添加事务输入面板显示隐藏
+      editRecordShow: false,
+      // 新建事务数据（发送到服务器）
+      stausEdit: {
+        id: '',
+        staus: '',
+        stausText: ''
+      },
+      // 控制警告面板的显示隐藏
+      handleBoxshow: false
     }
   },
   created () {
@@ -369,12 +425,91 @@ export default {
         this.$message.error('请正确填写订单信息')
       }
     },
+    // 获取新增修改面板下拉选择栏的商品单价与商品id
     pitchOn (ev) {
       const myselect = ev.target
       const index = myselect.selectedIndex
       this.editList.sum = 0
       this.editList.univalence = myselect.options[index].getAttribute('univalence')
       this.editList.commodityId = myselect.options[index].getAttribute('commodityId')
+    },
+    // 打开售后状态面板
+    async stausEditId (id) {
+      const { data: res } = await this.$http.get('/orderId', { params: { id } })
+      if (res.success !== 200) {
+        return this.$message.error('获取售后信息失败')
+      }
+      this.stausEditShow = true
+      this.stausList = res.message
+      console.log(this.stausList)
+    },
+    // 关闭售后状态面板
+    stausOff () {
+      this.stausEditShow = false
+    },
+    // 新增维修记录
+    editRecord1 (id) {
+      this.stausEdit.id = id
+      this.stausEdit.staus = 'maintain'
+      this.editRecordShow = true
+    },
+    // 新增换货记录
+    editRecord2 (id) {
+      this.stausEdit.id = id
+      this.stausEdit.staus = 'exchange'
+      this.editRecordShow = true
+    },
+    // 新增退货记录
+    editRecord3 (id) {
+      this.stausEdit.id = id
+      this.stausEdit.staus = 'returns'
+      this.editRecordShow = true
+    },
+    // 提交新增的事务
+    async editRecordYes (id) {
+      if (this.stausEdit.stausText !== '') {
+        const { data: res } = await this.$http.post('/orderStaus', this.stausEdit)
+        if (res.success !== 200) {
+          return this.$message.error('新建事务失败')
+        }
+        this.$message.success('添加事务成功')
+
+        this.getDataList()
+        const { data: res1 } = await this.$http.get('/orderId', { params: { id } })
+        if (res1.success !== 200) {
+          return this.$message.error('获取售后信息失败')
+        }
+        this.stausList = res1.message
+        this.stausEdit.stausText = ''
+        this.editRecordShow = false
+      } else {
+        this.$message.error('请输入事务内容')
+      }
+    },
+    // 取消新建事务（隐藏新建事务面板）
+    editRecordOff () {
+      this.stausEdit.stausText = ''
+      this.editRecordShow = false
+    },
+    // 退款面板显示
+    reimburse () {
+      this.handleBoxshow = true
+    },
+    // 警告确认弹窗面板
+    async handleBox (id) {
+      const { data: res } = await this.$http.post('/orderReimburse', { id: id })
+      if (res.success !== 200) {
+        return this.$message.error('添加订事务失败')
+      }
+      this.$message.success('添加事务成功')
+      this.getDataList()
+      const { data: res1 } = await this.$http.get('/orderId', { params: { id } })
+      if (res1.success !== 200) {
+        return this.$message.error('获取售后信息失败')
+      }
+      this.stausList = res1.message
+      this.stausEdit.stausText = ''
+      this.handleBoxshow = false
     }
   },
   computed: {
@@ -384,7 +519,8 @@ export default {
     }
   },
   components: {
-    paging: paging
+    paging: paging,
+    popupbox: popupbox
   }
 }
 </script>
@@ -497,6 +633,9 @@ export default {
         background-color: #e2e2e2;
         font-size: 15px;
       }
+      th:nth-child(13) {
+        width: 150px;
+      }
       td {
         border: 1px solid #cccccc;
         font-size: 15px;
@@ -558,6 +697,7 @@ export default {
       height: 320px;
       padding: 20px;
       background-color: #fff;
+      border-radius: 0 0 6px 6px;
       div {
         margin-top: 20px;
         margin-bottom: 35px;
@@ -603,6 +743,146 @@ export default {
     .input4 {
       width: 60px;
       margin-right: 10px;
+    }
+  }
+  .editAffair {
+    position: absolute;
+    z-index: 40;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    >div:nth-child(1) {
+      background-color: #fe7844;
+      color: #fff;
+      width: 820px;
+      height: 42px;
+      line-height: 42px;
+      padding: 0 20px;
+      img {
+        float: right;
+        margin-top: 10px;
+        width: 20px;
+      }
+    }
+    >div:nth-child(2) {
+      background-color: #fff;
+      height: 500px;
+      position: relative;
+      padding-top: 10px;
+      border-radius: 0 0 8px 8px;
+      div {
+        border-top: 1px solid #cccccc;
+        height: 140px;
+        width: 94%;
+        margin: 0 auto;
+        margin-top: 10px;
+        a {
+          margin-left: 0px;
+          line-height: 40px;
+          font-weight: bold;
+          font-size: 16px;
+          float: left;
+        }
+        div {
+          // border: 1px solid #000000;
+          display: block;
+          float: left;
+          margin-top: 10px;
+          width: 78%;
+          height: 130px;
+          overflow: hidden;
+        }
+        button {
+          float: right;
+          color: #fff;
+          background-color: #35a097;
+          border: none;
+          width: 80px;
+          height: 27px;
+          margin-top: 10px;
+        }
+      }
+      .message:nth-child(1) {
+        font-weight: bold;
+        font-size: 16px;
+        margin-left: 25px;
+      }
+      .message:nth-child(2) {
+        font-weight: bold;
+        font-size: 16px;
+        position: absolute;
+        position: absolute;
+        left: 300px;
+      }
+      .message:nth-child(3) {
+        font-weight: bold;
+        font-size: 16px;
+        position: absolute;
+        left: 580px;
+      }
+    }
+    #refund {
+      background-color: #fd4c4c;
+    }
+  }
+  .editRecord {
+    z-index: 80;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.4);
+  }
+  .editRecords {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 100;
+    >div:nth-child(1) {
+      width: 300px;
+      height: 40px;
+      background-color: #fe7844;
+      color: #fff;
+      line-height: 40px;
+      text-align: center;
+      font-size: 18px;
+    }
+    >div:nth-child(2) {
+      width: 300px;
+      height: 260px;
+      background: #fff;
+      overflow: hidden;
+      border-radius: 0 0 8px 8px;
+      textarea {
+        width: 300px;
+        height: 200px;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        padding: 5px;
+      }
+      .btn1 {
+      background-color: #fe7844;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        width: 80px;
+        height: 35px;
+        margin-left: 50px;
+    }
+    .btn2 {
+      background-color: #fe7844;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        width: 80px;
+        height: 35px;
+        float: right;
+        margin-right: 50px;
+        background-color: #999999;
+    }
     }
   }
 </style>
