@@ -48,6 +48,30 @@ Vue.filter('dateFormat', function (originVal) {
   return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
 })
 
+Vue.filter('dateBirth', function (originVal) { // 员工出生的过滤函数
+  const dt = new Date(originVal * 1000)
+  const y = dt.getFullYear() // 年
+  const m = (dt.getMonth() + 1 + '').padStart(2, '0') // 月
+  const d = (dt.getDate() + '').padStart(2, '0') // 日
+  return `${y}年${m}月${d}日`
+})
+
+Vue.filter('sexConvert', function (data) { // 过滤性别
+  if (data === 0) {
+    return '男'
+  } else {
+    return '女'
+  }
+})
+
+Vue.filter('typeConvert', function (data) { // 过滤账户类型
+  if (data === 0) {
+    return '管理员'
+  } else {
+    return '普通账户'
+  }
+})
+
 new Vue({
   router,
   store,
