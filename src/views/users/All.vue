@@ -128,7 +128,7 @@
                 <button class="useryes" @click="editYes">确定</button>
                 <button class="userno" @click="editOff">取消</button>
               </div>
-            </div> {{ editUserList }} {{ date }}
+            </div>
         </div>
     </div>
 </template>
@@ -214,10 +214,15 @@ export default {
       console.log(id)
       const { data: res } = await this.$http.post('/deluserId', { id: id })
       if (res.success !== 200) {
-        return this.$message.error('删除失败')
+        return this.$message.error(res.message)
       }
       this.$message.success('删除成功')
-      this.gitUsers()
+      if (id === Number(window.sessionStorage.id)) { // 如果删除的登录正在的账户清除sessionStorage 并且跳转到登录页
+        window.sessionStorage.clear()
+        this.$router.push('/login')
+      } else {
+        this.gitUsers()
+      }
     },
     // 查询用户
     queryLists () {
@@ -236,7 +241,7 @@ export default {
     // 处理日期时间
     pitchOn () {
       if (this.date.yyyy !== '请选择' && this.date.mm !== '请选择' && this.date.dd !== '请选择') {
-        this.editUserList.birthday = Number(new Date(this.date.yyyy, this.date.mm - 1, this.date.dd)) / 1000
+        this.editUserList.birthday = Number(new Date(this.date.yyyy, this.date.mm, this.date.dd)) / 1000
       } else {
         this.editUserList.birthday = null
       }
@@ -267,7 +272,7 @@ export default {
       this.editUserList.type = res.message.type
       const dt = new Date(res.message.birthday * 1000)
       const y = dt.getFullYear() // 年
-      const m = (dt.getMonth() + '').padStart(2, '0') // 月
+      const m = (dt.getMonth() + 1 + '').padStart(2, '0') // 月
       const d = (dt.getDate() + '').padStart(2, '0') // 日
       this.date.yyyy = y
       this.date.mm = m
@@ -327,6 +332,7 @@ export default {
         mm: '请选择',
         dd: '请选择'
       }
+      this.gitUsers()
       this.shadeShow = false
     }
   },

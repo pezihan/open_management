@@ -6,7 +6,6 @@ import Welcome from '@/components/Welcome.vue'
 
 import Order from '@/views/order/Order.vue'
 
-import Collect from '@/views/finance/Collect.vue'
 import Detail from '@/views/finance/Detail.vue'
 
 import Product from '@/views/product/Product.vue'
@@ -27,7 +26,6 @@ const routes = [
     children: [
       { path: '/welcome', component: Welcome },
       { path: '/order', component: Order },
-      { path: '/collect', component: Collect },
       { path: '/detail', component: Detail },
       { path: '/product', component: Product },
       { path: '/shipments', component: Shipments },
