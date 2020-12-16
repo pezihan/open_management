@@ -15,7 +15,7 @@ import '@/assets/css/global.css'
 import '@/assets/fonts/iconfont.css'
 
 // 配置请求的后端根路径
-axios.defaults.baseURL = '/open'
+axios.defaults.baseURL = 'http://127.0.0.1:4000/open'
 // 配置axios的request拦截器添加token验证,保证拥有获取数据的权限(在请求头中添加token属性)和添加 Nprogress 进度条 Nprogress.start()
 axios.interceptors.request.use(config => {
   // console.log(config)
